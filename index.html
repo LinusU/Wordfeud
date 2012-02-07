@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WordFeud</title>
+    <script type="text/javascript" src="js/sha1.js"></script>
+    <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui-1.8.17.min.js"></script>
+    <script type="text/javascript" src="js/WF.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/game.layout.css" />
+    <link rel="stylesheet" type="text/css" href="css/game.style.css" />
+    <link rel="stylesheet" type="text/css" href="css/popup.layout.css" />
+    <link rel="stylesheet" type="text/css" href="css/popup.style.css" />
+    <style type="text/css">
+        
+        nav {
+            overflow: auto;
+        }
+        
+        nav div {
+            overflow: auto;
+        }
+        
+        nav div div {
+            margin: 6px 4px;
+            background: #EEE;
+            padding: 4px;
+            border-radius: 4px;
+            width: 440px;
+            overflow: hidden;
+        }
+        
+        nav div div img {
+            float: left;
+            margin-right: 12px;
+            width: 60px;
+            height: 60px;
+        }
+        
+        nav div div p {
+            margin: 2px 0px 0px;
+        }
+        
+        header,
+        #login,
+        #site {
+            width: 960px;
+            margin: 0px auto;
+            font-family: 'Ubuntu', sans-serif;
+        }
+        
+    </style>
+</head>
+<body>
+    
+    <header>
+        <h1>Wordfeud Online</h1>
+    </header>
+    
+    <div id="site" style="display: none;">
+        
+        <nav></nav>
+        
+        <div id="game" style="display: none;">
+            
+            <div class="back"></div>
+            <div class="tagline"></div>
+            <div class="score"></div>
+            
+            <table class="board"></table>
+            <div class="chat"></div>
+            <div class="rack"></div>
+            <div class="ctrl"></div>
+            <div class="chatctrl"></div>
+            
+        </div>
+        
+    </div>
+    
+    <div id="popup">
+        
+        <form id="login" action="/" method="POST">
+            
+            <p>
+                Username: <br />
+                <input type="text" name="username" autofocus="autofocus" />
+            </p>
+            
+            <p>
+                Password: <br />
+                <input type="password" name="password" />
+            </p>
+            
+            <p>
+                <input type="submit" />
+            </p>
+            
+        </form>
+        
+        <form id="swap" style="display: none;">
+            
+            <p>
+                
+            </p>
+            
+            <p>
+                <input type="submit" value="Swap" />
+            </p>
+            
+        </form>
+        
+        <form id="invite" style="display: none;">
+            
+            <p>
+                Username: <br />
+                <input type="text" name="invitee" />
+            </p>
+            
+            <p>
+                Ruleset: <br />
+                <select name="ruleset"></select>
+            </p>
+            
+            <p>
+                Board type: <br />
+                <select name="board_type"></select>
+            </p>
+            
+            <p>
+                <input type="submit" value="Invite" />
+            </p>
+            
+        </form>
+        
+    </div>
+    
+    <script type="text/javascript">
+        
+        var i, j, $tr;
+        var $game = $('#game');
+        
+        var $board = $game.find('.board');
+        var $chat = $game.find('.chat');
+        var $rack = $game.find('.rack');
+        var $ctrl = $game.find('.ctrl');
+        var $back = $game.find('.back');
+        var $score = $game.find('.score');
+        var $tagline = $game.find('.tagline');
+        var $chatctrl = $game.find('.chatctrl');
+        
+        var current = {
+            user: null,
+            game: null
+        };
+        
+        $.each(WF.ruleset, function (i) {
+            $('#invite').find('[name=ruleset]').append('<option value="' + i + '">' + this + '</option>');
+        });
+        
+        $.each(WF.board_type, function (i) {
+            $('#invite').find('[name=board_type]').append('<option value="' + i + '">' + this + '</option>');
+        });
+        
+        var $board_xy = function (x, y) {
+            return $board.find('tr').eq(y).find('td').eq(x);
+        };
+        
+        var popup = {
+            show: function (form) { $('#popup').fadeIn().children('#' + form).show(); },
+            hide: function () { $('#popup').fadeOut(function () { $(this).children('form').hide(); }); }
+        };
+        
+        $back.text('Back').on('click', function () {
+            $('nav').show();
+            $game.hide();
+            current.game = null;
+        });
+        
+        $ctrl.append($('<button />').text('Play').on('click', function () {
+            SENDTHEMOVE();
+        }));
+        
+        $ctrl.append($('<button />').text('Pass').on('click', function () {
+            WF.game.pass(current.game.id, function (data) {
+                HANDLEOWNENTRY({
+                    move_type: "pass",
+                    is_running: data.is_running
+                });
+            });
+        }));
+        
+        $ctrl.append($('<button />').text('Swap').on('click', function () {
+            var $p = $('#swap').find('p').first().html('');
+            var $tiles = $('.tile').each(function (i) {
+                $p.append('<input type="checkbox" value="' + i + '" id="swaptile' + i + '" />');
+                $p.append('<label for="swaptile' + i + '"> ' + $(this).text() + '</label>');
+            });
+            $('#swap').one('submit', function (e) {
+                
+                e.preventDefault();
+                
+                var tiles = [], chars = [];
+                
+                $p.find('input').each(function () {
+                    if($(this).is(':checked')) {
+                        tiles.push($tiles.eq($(this).val()));
+                    }
+                });
+                
+                if(tiles.length == 0) {
+                    popup.hide();
+                    return ;
+                }
+                
+                $.each(tiles, function () {
+                    chars.push(this.text());
+                    this.remove();
+                });
+                
+                WF.game.swap(current.game.id, chars, function (data) {
+                    for(var i in data.new_tiles) {
+                        $rack.append($('<span class="tile" />').text(data.new_tiles[i]).draggable({
+                            revert: true,
+                            revertDuration: 0
+                        }));
+                    }
+                    HANDLEOWNENTRY({
+                        move_type: "swap",
+                        tile_count: chars.length,
+                        is_running: true
+                    });
+                    popup.hide();
+                }, function (error) {
+                    if(error == 'unable_to_swap_tiles') {
+                        alert(/*Unable to Swap Tiles*/ "There are less than seven tiles left in the bag.");
+                        popup.hide();
+                    }
+                });
+                
+            });
+            popup.show('swap');
+        }));
+        
+        $ctrl.append($('<button />').text('Clear').on('click', function () {
+            $board.find('.tile').appendTo($rack).each(function () {
+                if($(this).data('wildcard')) { $(this).text(''); }
+            });
+        }));
+        
+        (function () {
+            
+            var $textarea = $('<textarea />');
+            
+            var send = function () {
+                var v = $textarea.val();
+                if(v) { CHATSEND(v); }
+                $textarea.focus().val('');
+            };
+            
+            $chatctrl.append($textarea);
+            
+            $chatctrl.append($('<button />').text('Send').on('click', send));
+            $textarea.on('keypress', function (e) {
+                if(e.which == 13 && !e.shiftKey) { send(); e.preventDefault(); }
+            });
+            
+        })();
+        
+        $('#login').on('submit', function (e) {
+            
+            e.preventDefault();
+            
+            WF.login({
+                username: $(this).find('[name=username]').val(),
+                password: $(this).find('[name=password]').val()
+            }, function (data) {
+                
+                current.user = {
+                    id: data.id,
+                    username: data.username,
+                    email: data.email
+                };
+                
+                $('#site').show();
+                popup.hide();
+                
+                LOADLISTOFGAMES();
+                
+                var getNotificationsAndRecurse = function () {
+                    WF.user.notifications(function (data) {
+                        $.each(data.entries, function () { HANDLEENTRY(this); } );
+                        setTimeout(getNotificationsAndRecurse, 2000);
+                    });
+                };
+                
+                setTimeout(getNotificationsAndRecurse, 2000);
+                
+            });
+            
+        });
+        
+        $('#invite').on('submit', function (e) {
+            
+            e.preventDefault();
+            
+            var invitee = $(this).find('[name=invitee]').val();
+            
+            if(invitee) {
+                WF.invite.new(
+                    invitee,
+                    $(this).find('[name=ruleset]').val(),
+                    $(this).find('[name=board_type]').val(),
+                    function (data) {
+                        popup.hide();
+                    }
+                );
+            } else {
+                WF.random_request.create(
+                    $(this).find('[name=ruleset]').val(),
+                    $(this).find('[name=board_type]').val(),
+                    function (data) {
+                        popup.hide();
+                    }
+                );
+            }
+            
+        });
+        
+        function LOADLISTOFGAMES() {
+            WF.games(function (data) {
+                
+                $('nav').html('<div>Your Turn</div><div>Their Turn</div><div>Finished Games</div>').prepend(
+                    $('<button />').text('New game').on('click', function () {
+                        popup.show('invite');
+                    })
+                );
+                
+                $.each(data.games, function (i, g) {
+                    
+                    var iam = ( g.players[0].id == current.user.id ? 0 : 1 );
+                    var $div = $('<div data-id="' + g.id + '" />');
+                    
+                    var outcome = (g.is_running?null:(g.last_move.move_type == 'resign')?(g.last_move.user_id==current.user.id?0:2):(g.players[iam].score==g.players[(iam+1)%2].score?1:(g.players[iam].score>g.players[(iam+1)%2].score?2:0)));
+                    
+                    $div.append('<img src="proxy.php?sessionid=' + window.sessionid + '&avatar=' + g.players[(iam+1)%2].id + '" />');
+                    $div.append('<p>' + (g.is_running?'Playing with ':'You ' + (['lost','tied','won'][outcome]) + ' against ') + g.players[(iam+1)%2].username + ' (' + g.chat_count + ')</p>');
+                    $div.append('<p>' + WF.ruleset[g.ruleset] + ' game started ' + '</p>');
+                    $div.append('<p>' + TAGLINE({ game: g }) + '</p>');
+                    
+                    $div.click(function () {
+                        $('nav').hide();
+                        LOADAGAME(g.id);
+                    });
+                    
+                    $('nav').children('div').eq(g.is_running?(g.current_player==iam?0:1):2).append($div);
+                    
+                });
+                
+            });
+        }
+        
+        function LOADAGAME(gid) {
+            
+            $game.hide();
+            
+            current.game = { id: gid };
+            
+            $board.children().remove();
+            
+            for(i=0;i<15;i++) {
+                $tr = $('<tr />');
+                for(j=0;j<15;j++) {
+                    $tr.append('<td />');
+                }
+                $board.append($tr);
+            }
+            
+            $board.find('td').droppable({
+                drop: function (e, ui) {
+                    
+                    if($(this).children().length > 0) {
+                        return ;
+                    }
+                    
+                    $(this).append(ui.draggable);
+                    if(ui.draggable.data('wildcard')) {
+                        /* FIXME */
+                        ui.draggable.text(window.prompt(""));
+                    }
+                    
+                }
+            });
+            
+            WF.game(gid, function (data) {
+                
+                var i;
+                var iam = ( data.game.players[0].id == current.user.id ? 0 : 1 );
+                
+                $score.html('');
+                
+                $.each(data.game.players, function (i) {
+                    $score.append('<span' + (i==iam?' class="my"':'') + ' data-user-id="' + this.id + '">' + this.score + '</span>');
+                });
+                
+                $tagline.text(TAGLINE(data));
+                
+                $rack.html('');
+                
+                $.each(data.game.players[iam].rack, function () {
+                    CREATETILE(this).appendTo($rack);
+                });
+                
+                for(i in data.game.tiles) {
+                    var t = data.game.tiles[i];
+                    $board_xy(t[0], t[1]).html('<span>' + t[2] + '</span>');
+                }
+                
+                $game.show();
+                
+                WF.board(data.game.board, function (data) {
+                    for(var y in data.board) {
+                        for(var x in data.board[y]) {
+                            $board_xy(x, y).css('background-position', '0px -' + (32 * data.board[y][x]) + 'px');
+                        }
+                    }
+                });
+                
+            });
+            
+            $chat.html('');
+            
+            WF.game.chat(gid, function (data) {
+                $.each(data.messages, function () {
+                    $chat.append('<p' +  (this.sender==current.user.id?' class="my"':'') + '>' + this.message.replace(/\n/g, '<br />') + '</p>');
+                });
+                $chat.scrollTop($chat.prop('scrollHeight') - $chat.height());
+            });
+            
+        }
+        
+        $rack.droppable({
+            drop: function (e, ui) {
+                $(this).append(ui.draggable);
+                if(ui.draggable.data('wildcard')) {
+                    ui.draggable.text('');
+                }
+            }
+        });
+        
+        function GETTHEMOVE() {
+            
+            var move = [];
+            var $tiles = $board.find('.tile');
+            
+            $tiles.each(function () {
+                move.push([
+                    $(this).parent().index(),
+                    $(this).parent().parent().index(),
+                    $(this).text(),
+                    $(this).data('wildcard')
+                ]);
+            });
+            
+            return move;
+        }
+        
+        function SENDTHEMOVE() {
+            var move = GETTHEMOVE();
+            WF.game.move(current.game.id, move, function (data) {
+                
+                $board.find('.tile').draggable('destroy').remove();
+                
+                for(var i in data.new_tiles) {
+                    CREATETILE(data.new_tiles[i]).appendTo($rack);
+                }
+                
+                HANDLEOWNENTRY({
+                    type: "move",
+                    move_type: "move",
+                    points: data.points,
+                    main_word: data.main_word,
+                    created: data.updated,
+                    move: move
+                });
+                
+            }, function (error) {
+                if(error == 'illegal_word') { /*Invalid Word*/        alert('At least one of the words placed on the board is not in our dictionary.'); }
+                if(error == 'illegal_move') { /*Could Not Make Move*/ alert('Tiles must be placed on a straight vertical or horizontal line, adjacent to one or more existing tiles.'); }
+            });
+        }
+        
+        function HANDLEOWNENTRY(data) {
+            if(!data.game_id) { data.game_id = current.game.id; }
+            if(!data.user_id) { data.user_id = current.user.id; }
+            if(!data.username) { data.username = current.user.username; }
+            return HANDLEENTRY(data);
+        }
+        
+        function HANDLEENTRY(data) {
+            
+            $thegame = $('nav div[data-id="' + data.game_id + '"]');
+            
+            if(data.type == "move") {
+                $thegame.appendTo($('nav').children('div').eq((data.user_id==current.user.id)?1:0));
+                $thegame.find('p').eq(2).text(TAGLINE(data));
+            }
+            
+            if(data.type == "invite_received") {
+                
+            }
+            
+            if(data.type == "new_game") {
+                
+                var $div = $('<div data-id="' + data.game_id + '" />');
+                
+                $div.append('<img src="proxy.php?sessionid=' + window.sessionid + '&avatar=' + data.user_id + '" />');
+                $div.append('<p>' + 'Playing with ' + data.username + '</p>');
+                $div.append('<p>' + ' game started ' + '</p>');
+                $div.append('<p>' + (data.your_turn?"It's your turn.":"Waiting for " + data.username + ".") + '</p>');
+                
+                $div.click(function () {
+                    $('nav').hide();
+                    LOADAGAME(data.game_id);
+                });
+                
+                $('nav').children('div').eq(data.your_turn?0:1).append($div);
+                
+            }
+            
+            if(current.game === null || data.game_id != current.game.id) {
+                return ;
+            }
+            
+            if(data.type == "chat") {
+                $chat.append('<p' +  (data.user_id==current.user.id?' class="my"':'') + '>' + data.message.replace(/\n/g, '<br />') + '</p>');
+                $chat.scrollTop($chat.prop('scrollHeight') - $chat.height());
+            }
+            
+            if(data.type == "move") {
+                $tagline.text(TAGLINE(data));
+                if(data.move_type == "move") {
+                    for(i in data.move) {
+                        var t = data.move[i];
+                        $board_xy(t[0], t[1]).find('.tile').appendTo($rack);
+                        $board_xy(t[0], t[1]).html('<span>' + t[2] + '</span>');
+                    }
+                    var $s = $score.find('[data-user-id="' + data.user_id + '"]');
+                    $s.text(parseInt($s.text(), 10) + data.points);
+                }
+            }
+            
+        }
+        
+        function CHATSEND(msg) {
+            WF.game.chat.send(current.game.id, msg, function (data) {
+                HANDLEOWNENTRY({
+                    type: "chat",
+                    created: data.sent,
+                    message: msg
+                });
+            });
+        }
+        
+        function TAGLINE(data) {
+            
+            var person = "Unknown";
+            var move = data;
+            
+            if(data.game) {
+                var game = data.game;
+                if(game.last_move) {
+                    var wasme = game.players[(game.current_player + 1)%2].id == current.user.id;
+                    person = (wasme?"You":game.players[(game.current_player + 1)%2].username);
+                    move = game.last_move;
+                } else {
+                    if(game.players[game.current_player].id == current.user.id) {
+                        return "It's your turn.";
+                    } else {
+                        return "Waiting for " + game.players[game.current_player].username + ".";
+                    }
+                }
+            }
+            
+            if(data.username) {
+                person = ( data.username == current.user.username ? "You" : data.username );
+            } else if(data.user_id) {
+                if(data.user_id == current.user.id) { person = "You"; }
+            }
+            
+            if(move.move_type == "move") {
+                return person + " played " + move.main_word + " for " + move.points + " points.";
+            } else if(move.move_type == "pass") {
+                return person + " passed.";
+            } else if(move.move_type == "swap") {
+                return person + " swapped " + move.tile_count + " tiles.";
+            } else if(move.move_type == "resign") {
+                return person + " resigned.";
+            } else {
+                return "What just happend?";
+            }
+            
+        }
+        
+        function CREATETILE(char) {
+            return $('<span class="tile" />').text("" + char).data('wildcard', (char == "")).draggable({
+                revert: true,
+                revertDuration: 0
+            });
+        }
+        
+    </script>
+    
+</body>
+</html>

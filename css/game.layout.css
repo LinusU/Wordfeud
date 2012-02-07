@@ -1,0 +1,98 @@
+
+#game {
+    position: relative;
+}
+
+#game .back {
+    position: absolute;
+    top: 0px;
+    height: 24px;
+    left: 0px;
+    width: 64px;
+    text-align: center;
+}
+
+#game .tagline {
+    position: absolute;
+    top: 0px;
+    height: 24px;
+    left: 64px;
+    right: 64px;
+    text-align: center;
+}
+
+#game .score {
+    position: absolute;
+    top: 0px;
+    height: 24px;
+    right: 0px;
+    width: 64px;
+    text-align: center;
+}
+
+#game .board {
+    position: absolute;
+    left: 0px;
+    top: 24px;
+    width: 495px;
+    height: 495px;
+}
+
+#game .chat {
+    background: #EEE;
+    position: absolute;
+    right: 0px;
+    width: 460px;
+    height: 495px;
+    top: 24px;
+    overflow: scroll;
+    overflow-x: hidden;
+}
+
+#game .rack {
+    position: absolute;
+    top: 519px;
+    left: 0px;
+    width: 254px;
+    height: 32px;
+    padding: 8px;
+    border: 1px dashed #666;
+}
+
+#game .ctrl {
+    position: absolute;
+    top: 519px;
+    left: 272px;
+    width: 206px;
+    height: 32px;
+    padding: 9px 9px 9px 8px;
+}
+
+#game .ctrl button {
+    height: 32px;
+}
+
+#game .chatctrl {
+    position: absolute;
+    right: 0px;
+    width: 460px;
+    top: 519px;
+    height: 50px;
+}
+
+#game .chatctrl textarea {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    right: 66px;
+    height: 28px;
+    padding: 2px;
+}
+
+#game .chatctrl button {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    width: 48px;
+    height: 32px;
+}

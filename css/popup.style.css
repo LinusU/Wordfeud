@@ -1,0 +1,17 @@
+
+#swap p {
+    overflow: auto;
+}
+
+#swap label {
+    margin: 4px;
+}
+
+#swap input[type="checkbox"] {
+    display: none;
+}
+
+#swap input[type="checkbox"]:checked + label {
+    border: 2px solid green;
+    margin: 2px;
+}

@@ -1,0 +1,74 @@
+
+
+#game table.board {
+    border-collapse: collapse;
+}
+
+#game table.board td {
+    width: 32px;
+    height: 32px;
+    border: 1px solid white;
+    padding: 0px;
+    text-align: center;
+    background-image: url(../img/tile.png);
+    background-position: 0px 0px;
+}
+
+#game table.board td span {
+    display: block;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 2px;
+    width: 30px;
+    height: 30px;
+    margin: 1px;
+    line-height: 32px;
+}
+
+#game table.board td span.tile {
+    margin: 0px;
+    border: 1px solid yellow;
+}
+
+
+#swap label,
+#game .rack span {
+    display: block;
+    float: left;
+    height: 32px;
+    width: 32px;
+    background: url(../img/tile.png);
+    margin: 2px;
+    text-align: center;
+    line-height: 34px;
+}
+
+#game .chat p {
+    background: white;
+    border-radius: 6px;
+    padding: 4px;
+    margin: 4px;
+    margin-right: 40px;
+    float: left;
+    clear: both;
+}
+
+#game .chat p.my {
+    float: right;
+    margin-left: 40px;
+    margin-right: 4px;
+}
+
+#game .score span {
+    display: block;
+    margin: 0px;
+    padding: 0px;
+    float: left;
+    width: 32px;
+    text-align: center;
+    height: 24px;
+    line-height: 26px;
+}
+
+#game .score span.my {
+    font-weight: bold;
+}
