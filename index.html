@@ -182,6 +182,7 @@
         $ctrl.append($('<button />').text('Pass').on('click', function () {
             WF.game.pass(current.game.id, function (data) {
                 HANDLEOWNENTRY({
+                    type: "move",
                     move_type: "pass",
                     is_running: data.is_running
                 });
@@ -224,6 +225,7 @@
                         }));
                     }
                     HANDLEOWNENTRY({
+                        type: "move",
                         move_type: "swap",
                         tile_count: chars.length,
                         is_running: true
