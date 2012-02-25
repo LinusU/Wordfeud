@@ -14,6 +14,8 @@
         
         nav {
             overflow: auto;
+            float: left;
+            width: 440px;
         }
         
         nav div {
@@ -25,7 +27,6 @@
             background: #EEE;
             padding: 4px;
             border-radius: 4px;
-            width: 440px;
             overflow: hidden;
         }
         
@@ -58,6 +59,7 @@
     
     <div id="site" style="display: none;">
         
+        <nav></nav>
         <nav></nav>
         
         <div id="game" style="display: none;">
@@ -330,30 +332,61 @@
         function LOADLISTOFGAMES() {
             WF.games(function (data) {
                 
-                $('nav').html('<div>Your Turn</div><div>Their Turn</div><div>Finished Games</div>').prepend(
-                    $('<button />').text('New game').on('click', function () {
-                        popup.show('invite');
-                    })
-                );
+                $('nav').eq(0).html('<div>Your Turn</div><div>Their Turn</div><div>Finished Games</div>').children().hide();
                 
                 $.each(data.games, function (i, g) {
                     
                     var iam = ( g.players[0].id == current.user.id ? 0 : 1 );
                     var $div = $('<div data-id="' + g.id + '" />');
                     
+                    var date = new Date(Math.round(g.created * 1000));
                     var outcome = (g.is_running?null:(g.last_move.move_type == 'resign')?(g.last_move.user_id==current.user.id?0:2):(g.players[iam].score==g.players[(iam+1)%2].score?1:(g.players[iam].score>g.players[(iam+1)%2].score?2:0)));
                     
+                    /* FIXME: visualize g.chat_count */
+                    
                     $div.append('<img src="proxy.php?sessionid=' + window.sessionid + '&avatar=' + g.players[(iam+1)%2].id + '" />');
-                    $div.append('<p>' + (g.is_running?'Playing with ':'You ' + (['lost','tied','won'][outcome]) + ' against ') + g.players[(iam+1)%2].username + ' (' + g.chat_count + ')</p>');
-                    $div.append('<p>' + WF.ruleset[g.ruleset] + ' game started ' + '</p>');
-                    $div.append('<p>' + TAGLINE({ game: g }) + '</p>');
+                    $div.append('<p class="line-0">' + (g.is_running?'Playing with ':'You ' + (['lost','tied','won'][outcome]) + ' against ') + g.players[(iam+1)%2].username + '</p>');
+                    $div.append('<p class="line-1">' + WF.ruleset[g.ruleset] + ' game started ' + date.getDate() + ' ' + (['jan','feb','mar','apr','may','jun','jul','aug','sep','nov','dec'][date.getMonth()]) + ' ' + date.getHours() + ':' +  (date.getMinutes()<10?"0":"") + date.getMinutes() + '</p>');
+                    $div.append('<p class="line-2">' + TAGLINE({ game: g }) + '</p>');
                     
                     $div.click(function () {
                         $('nav').hide();
                         LOADAGAME(g.id);
                     });
                     
-                    $('nav').children('div').eq(g.is_running?(g.current_player==iam?0:1):2).append($div);
+                    $('nav').eq(0).children('div').eq(g.is_running?(g.current_player==iam?0:1):2).show().append($div);
+                    
+                });
+                
+            });
+            WF.user.status(function (data) {
+                
+                $('nav').eq(1).html('<div>Pending Invitations</div><div>Sent Invitations</div><div>&nbsp;</div>').children().hide().last().show().append(
+                    $('<div />')
+                        .append('<img src="img/add.png" alt="Add" />')
+                        .append('<p class="line-0">Start new game</p>')
+                        .on('click', function () {
+                            popup.show('invite');
+                        })
+                );
+                
+                $.each(data.invites_received, function () {
+                    
+                    var iid = this.id;
+                    var $div = $('<div data-id="' + this.id + '" />');
+                    
+                    $div.append('<p>' + 'Invitation from ' + this.inviter + '</p>');
+                    $div.append('<p>' + WF.ruleset[this.ruleset] + ' game' + '</p>');
+                    $div.append('<p>' + '<button>Accept</button>' + '</p>');
+                    
+                    $div.find('button').click(function () {
+                        $('nav').hide();
+                        WF.invite.accept(iid, function (data) {
+                            LOADAGAME(data.id);
+                        });
+                    });
+                    
+                    $('nav').eq(1).children('div').eq(0).show().append($div);
                     
                 });
                 
@@ -499,10 +532,10 @@
         
         function HANDLEENTRY(data) {
             
-            $thegame = $('nav div[data-id="' + data.game_id + '"]');
+            $thegame = $('nav').eq(0).find('div[data-id="' + data.game_id + '"]');
             
             if(data.type == "move") {
-                $thegame.appendTo($('nav').children('div').eq((data.user_id==current.user.id)?1:0));
+                $thegame.appendTo($('nav').eq(0).children('div').eq((data.user_id==current.user.id)?1:0));
                 $thegame.find('p').eq(2).text(TAGLINE(data));
             }
             
@@ -524,7 +557,7 @@
                     LOADAGAME(data.game_id);
                 });
                 
-                $('nav').children('div').eq(data.your_turn?0:1).append($div);
+                $('nav').eq(0).children('div').eq(data.your_turn?0:1).append($div);
                 
             }
             

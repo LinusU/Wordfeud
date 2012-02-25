@@ -160,6 +160,14 @@ WF.game.chat.send = function (game_id, message, success, error) {
 
 WF.user = {};
 
+WF.user.status = function (success, error) {
+    return WF.load({
+        url: 'user/status',
+        success: success,
+        error: error
+    });
+};
+
 WF.user.notifications = function (success, error) {
     return WF.load({
         url: 'user/notifications',
@@ -193,6 +201,14 @@ WF.invite.new = function (invitee, ruleset, board_type, success, error) {
         error: error
     });
 };
+
+WF.invite.accept = function (id, success, error) {
+    return WF.load({
+        url: 'invite/' + id + '/accept',
+        success: success,
+        error: error
+    });
+}
 
 WF.random_request = {};
 
